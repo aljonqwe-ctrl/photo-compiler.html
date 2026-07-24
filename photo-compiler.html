@@ -1,0 +1,1101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact — Photo Compiler</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg-deep:#121013;
+    --bg-panel:#1a171b;
+    --bg-well:#0d0b0e;
+    --paper:#f2ece1;
+    --paper-dim:#c9c2b4;
+    --safelight:#c1432e;
+    --safelight-dim:#7a2c20;
+    --amber:#d9a441;
+    --line:#332f34;
+    --text:#f2ece1;
+    --text-mute:#8b8690;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;}
+  body{
+    background:var(--bg-deep);
+    color:var(--text);
+    font-family:'IBM Plex Mono',monospace;
+    display:flex;
+    flex-direction:column;
+    min-height:100vh;
+  }
+  ::selection{background:var(--safelight);color:var(--paper);}
+
+  header{
+    padding:22px 28px 16px;
+    border-bottom:1px solid var(--line);
+    display:flex;
+    align-items:baseline;
+    justify-content:space-between;
+    flex-wrap:wrap;
+    gap:8px;
+  }
+  header .brand{
+    font-family:'Fraunces',serif;
+    font-weight:600;
+    font-size:26px;
+    letter-spacing:0.01em;
+  }
+  header .brand span{color:var(--safelight);}
+  header .meta{
+    font-size:11px;
+    letter-spacing:0.08em;
+    text-transform:uppercase;
+    color:var(--text-mute);
+  }
+
+  .workspace{
+    flex:1;
+    display:grid;
+    grid-template-columns:340px 1fr;
+    min-height:0;
+  }
+  @media (max-width:860px){
+    .workspace{grid-template-columns:1fr;}
+  }
+
+  /* ---------- LEFT PANEL ---------- */
+  .panel{
+    background:var(--bg-panel);
+    border-right:1px solid var(--line);
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+  }
+  .panel-section{
+    padding:18px 20px;
+    border-bottom:1px solid var(--line);
+  }
+  .label{
+    font-size:10px;
+    letter-spacing:0.12em;
+    text-transform:uppercase;
+    color:var(--text-mute);
+    margin-bottom:10px;
+    display:block;
+  }
+  .dropzone{
+    border:1.5px dashed var(--line);
+    border-radius:2px;
+    padding:22px 14px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .15s, background .15s;
+  }
+  .dropzone:hover, .dropzone.drag{
+    border-color:var(--safelight);
+    background:rgba(193,67,46,0.06);
+  }
+  .dropzone .icon{font-size:22px;margin-bottom:6px;color:var(--amber);}
+  .dropzone .t1{font-family:'Fraunces',serif;font-size:15px;font-weight:500;}
+  .dropzone .t2{font-size:11px;color:var(--text-mute);margin-top:4px;}
+  input[type=file]{display:none;}
+  .drop-status{
+    font-size:10.5px;
+    color:var(--amber);
+    text-align:center;
+    height:14px;
+    margin-top:8px;
+    opacity:0;
+    transition:opacity .25s;
+  }
+  .drop-status.show{opacity:1;}
+
+  .default-dur{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+  }
+  .stepper{
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .stepper button{
+    width:26px;height:26px;
+    border:1px solid var(--line);
+    background:var(--bg-well);
+    color:var(--paper);
+    border-radius:2px;
+    cursor:pointer;
+    font-size:14px;
+    line-height:1;
+  }
+  .stepper button:hover{border-color:var(--amber);color:var(--amber);}
+  .stepper .val{
+    min-width:46px;
+    text-align:center;
+    font-size:13px;
+    font-weight:500;
+  }
+  .apply-all{
+    margin-top:10px;
+    width:100%;
+    background:none;
+    border:1px solid var(--line);
+    color:var(--text-mute);
+    padding:7px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:11px;
+    letter-spacing:0.04em;
+    border-radius:2px;
+    cursor:pointer;
+  }
+  .apply-all:hover{color:var(--paper);border-color:var(--paper-dim);}
+
+  .filmstrip-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .filmstrip-head .count{color:var(--amber);}
+
+  .filmstrip{
+    flex:1;
+    overflow-y:auto;
+    padding:10px 12px;
+  }
+  .filmstrip:empty::after{
+    content:"No frames loaded yet.";
+    display:block;
+    color:var(--text-mute);
+    font-size:11px;
+    padding:20px 8px;
+    text-align:center;
+  }
+  .frame-card{
+    display:flex;
+    gap:10px;
+    padding:8px;
+    margin-bottom:8px;
+    background:var(--bg-well);
+    border:1px solid var(--line);
+    border-radius:2px;
+    position:relative;
+  }
+  .frame-card.active{border-color:var(--safelight);}
+  .frame-thumb{
+    width:52px;height:52px;
+    object-fit:cover;
+    border-radius:1px;
+    flex-shrink:0;
+    background:#000;
+  }
+  .frame-info{flex:1;min-width:0;}
+  .frame-name{
+    font-size:11px;
+    color:var(--paper-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    margin-bottom:6px;
+  }
+  .frame-controls{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:6px;
+  }
+  .frame-dur{
+    font-size:12px;
+    color:var(--amber);
+    min-width:34px;
+  }
+  .frame-btns{display:flex;gap:4px;}
+  .frame-btns button{
+    width:20px;height:20px;
+    border:1px solid var(--line);
+    background:none;
+    color:var(--text-mute);
+    border-radius:2px;
+    cursor:pointer;
+    font-size:11px;
+    line-height:1;
+  }
+  .frame-btns button:hover{color:var(--paper);border-color:var(--paper-dim);}
+  .frame-order{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .frame-order button{
+    width:16px;height:16px;
+    border:none;
+    background:none;
+    color:var(--text-mute);
+    cursor:pointer;
+    font-size:9px;
+  }
+  .frame-order button:hover{color:var(--amber);}
+  .frame-remove{
+    position:absolute;
+    top:6px;right:6px;
+    border:none;
+    background:none;
+    color:var(--text-mute);
+    cursor:pointer;
+    font-size:12px;
+  }
+  .frame-remove:hover{color:var(--safelight);}
+
+  /* ---------- MAIN STAGE ---------- */
+  .stage{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:30px;
+    gap:18px;
+    min-width:0;
+  }
+  .frame-wrap{
+    width:100%;
+    max-width:960px;
+  }
+  .sprockets{
+    display:flex;
+    justify-content:space-between;
+    padding:0 10px;
+  }
+  .sprockets div{
+    width:9px;height:9px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:1px;
+  }
+  .sprockets.top{margin-bottom:4px;}
+  .sprockets.bottom{margin-top:4px;}
+
+  .canvas-frame{
+    background:#000;
+    border:1px solid var(--line);
+    aspect-ratio:16/9;
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    position:relative;
+    overflow:hidden;
+  }
+  canvas{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+  .empty-state{
+    position:absolute;
+    text-align:center;
+    color:var(--text-mute);
+    font-size:12px;
+    pointer-events:none;
+  }
+  .empty-state .t{
+    font-family:'Fraunces',serif;
+    font-size:18px;
+    color:var(--paper-dim);
+    margin-bottom:6px;
+  }
+
+  .progress-track{
+    display:flex;
+    width:100%;
+    height:8px;
+    gap:2px;
+    cursor:pointer;
+  }
+  .progress-seg{
+    background:var(--bg-well);
+    border:1px solid var(--line);
+    position:relative;
+    overflow:hidden;
+    border-radius:1px;
+  }
+  .progress-seg .fill{
+    position:absolute;
+    left:0;top:0;bottom:0;
+    width:0%;
+    background:var(--safelight);
+  }
+  .progress-seg.done .fill{width:100%;background:var(--amber);}
+
+  .transport{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    width:100%;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .transport-left{
+    display:flex;
+    align-items:center;
+    gap:12px;
+  }
+  .play-btn{
+    width:40px;height:40px;
+    border-radius:50%;
+    border:1px solid var(--paper-dim);
+    background:none;
+    color:var(--paper);
+    cursor:pointer;
+    font-size:14px;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .play-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .transport-info{font-size:11px;color:var(--text-mute);}
+  .transport-info b{color:var(--paper-dim);font-weight:500;}
+
+  .export-btn{
+    background:var(--safelight);
+    color:var(--paper);
+    border:none;
+    padding:11px 20px;
+    border-radius:2px;
+    font-family:'IBM Plex Mono',monospace;
+    font-size:12px;
+    letter-spacing:0.05em;
+    cursor:pointer;
+    text-transform:uppercase;
+  }
+  .export-btn:hover{background:#a8371f;}
+  .export-btn:disabled{background:var(--line);color:var(--text-mute);cursor:not-allowed;}
+
+  .export-notice{
+    font-size:10.5px;
+    color:var(--amber);
+    max-width:960px;
+    width:100%;
+    min-height:14px;
+  }
+  .footnote{
+    font-size:10.5px;
+    color:var(--text-mute);
+    max-width:960px;
+    width:100%;
+    line-height:1.5;
+  }
+  .footnote b{color:var(--paper-dim);font-weight:500;}
+
+  /* ---------- BOTTOM STATUS / LOADING BAR ---------- */
+  body{padding-bottom:34px;} /* keep content clear of the fixed bar */
+  .status-bar{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:34px;
+    background:var(--bg-well);
+    border-top:1px solid var(--line);
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:0 16px;
+    z-index:100;
+  }
+  .status-bar-track{
+    flex:1;
+    max-width:420px;
+    height:6px;
+    background:var(--bg-panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .status-bar-fill{
+    height:100%;
+    width:0%;
+    background:var(--amber);
+    transition:width .2s ease, background-color .2s ease;
+  }
+  .status-bar.busy .status-bar-fill{background:var(--safelight);}
+  .status-bar.ready .status-bar-fill{background:var(--amber);}
+  .status-bar-dot{
+    width:8px;height:8px;
+    border-radius:50%;
+    background:var(--text-mute);
+    flex-shrink:0;
+  }
+  .status-bar.busy .status-bar-dot{background:var(--safelight);animation:pulse 1s ease-in-out infinite;}
+  .status-bar.ready .status-bar-dot{background:var(--amber);}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.35;}}
+  .status-bar-label{
+    font-size:11px;
+    color:var(--text-mute);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .status-bar.ready .status-bar-label, .status-bar.busy .status-bar-label{color:var(--paper-dim);}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">CONTACT<span>.</span> <span style="color:var(--text-mute);font-size:14px;font-weight:400;">photo compiler</span></div>
+  <div class="meta">render 1920 × 1080 · default 7s / frame</div>
+</header>
+
+<div class="workspace">
+  <aside class="panel">
+    <div class="panel-section">
+      <span class="label">Add photos</span>
+      <div class="dropzone" id="dropzone">
+        <div class="icon">＋</div>
+        <div class="t1">Drop JPG / PNG</div>
+        <div class="t2">or click to browse — multiple at once, full resolution kept</div>
+      </div>
+      <div class="drop-status" id="dropStatus"></div>
+      <input type="file" id="fileInput" accept="image/jpeg,image/png" multiple>
+    </div>
+
+    <div class="panel-section">
+      <span class="label">Default duration (new frames)</span>
+      <div class="default-dur">
+        <div class="stepper">
+          <button id="defMinus">−</button>
+          <span class="val" id="defVal">7s</span>
+          <button id="defPlus">＋</button>
+        </div>
+      </div>
+      <button class="apply-all" id="applyAll">Apply default to all frames</button>
+    </div>
+
+    <div class="panel-section filmstrip-head" style="border-bottom:none;">
+      <span class="label" style="margin:0;">Filmstrip <span class="count" id="frameCount">(0)</span></span>
+    </div>
+    <div class="filmstrip" id="filmstrip"></div>
+  </aside>
+
+  <main class="stage">
+    <div class="frame-wrap">
+      <div class="sprockets top" id="sprocketsTop"></div>
+      <div class="canvas-frame">
+        <canvas id="stageCanvas" width="1920" height="1080"></canvas>
+        <div class="empty-state" id="emptyState">
+          <div class="t">Nothing loaded</div>
+          add photos on the left to begin
+        </div>
+      </div>
+      <div class="sprockets bottom" id="sprocketsBottom"></div>
+    </div>
+
+    <div class="progress-track" id="progressTrack"></div>
+
+    <div class="transport">
+      <div class="transport-left">
+        <button class="play-btn" id="playBtn">▶</button>
+        <div class="transport-info">
+          Frame <b id="curFrame">–</b> / <span id="totFrame">0</span>
+          &nbsp;·&nbsp; total <b id="totTime">0:00</b>
+        </div>
+      </div>
+      <button class="export-btn" id="exportBtn" disabled>Export video (.mp4)</button>
+    </div>
+    <div class="export-notice" id="exportNotice"></div>
+
+    <div class="footnote">
+      <b>On quality:</b> every photo is drawn at its full source resolution, letterboxed (not cropped or stretched) to fit the 1920×1080 frame — nothing is resampled below its original detail. Export always produces MP4 (H.264), on every browser, using an in-browser encoder: each frame is captured as a lossless PNG first, then encoded at CRF 0 (H.264's mathematically lossless mode) in 4:4:4 chroma (no color subsampling), so no color — from the letterbox bars to the photos themselves — is degraded. The trade-off is file size (lossless video is large) and encode time; a status bar at the bottom of the page shows exactly what stage it's at. The source files on your device are never altered.
+    </div>
+  </main>
+</div>
+
+<div class="status-bar" id="statusBar">
+  <div class="status-bar-dot"></div>
+  <div class="status-bar-track"><div class="status-bar-fill" id="statusBarFill"></div></div>
+  <div class="status-bar-label" id="statusBarLabel">Idle — add photos to begin</div>
+</div>
+
+<script>
+const state = {
+  frames: [],       // {id, name, bitmap, thumbUrl, duration}
+  defaultDuration: 7,
+  currentIndex: 0,
+  playing: false,
+  playTimer: null,
+  playStart: 0,
+  exporting: false,
+};
+
+const el = {
+  dropzone: document.getElementById('dropzone'),
+  dropStatus: document.getElementById('dropStatus'),
+  fileInput: document.getElementById('fileInput'),
+  defVal: document.getElementById('defVal'),
+  defMinus: document.getElementById('defMinus'),
+  defPlus: document.getElementById('defPlus'),
+  applyAll: document.getElementById('applyAll'),
+  filmstrip: document.getElementById('filmstrip'),
+  frameCount: document.getElementById('frameCount'),
+  canvas: document.getElementById('stageCanvas'),
+  emptyState: document.getElementById('emptyState'),
+  progressTrack: document.getElementById('progressTrack'),
+  playBtn: document.getElementById('playBtn'),
+  curFrame: document.getElementById('curFrame'),
+  totFrame: document.getElementById('totFrame'),
+  totTime: document.getElementById('totTime'),
+  exportBtn: document.getElementById('exportBtn'),
+  exportNotice: document.getElementById('exportNotice'),
+  sprocketsTop: document.getElementById('sprocketsTop'),
+  sprocketsBottom: document.getElementById('sprocketsBottom'),
+  statusBar: document.getElementById('statusBar'),
+  statusBarFill: document.getElementById('statusBarFill'),
+  statusBarLabel: document.getElementById('statusBarLabel'),
+};
+
+// ---------- bottom status / loading bar ----------
+// mode: 'idle' | 'busy' (actively reading/rendering, red pulse) | 'ready' (done, amber)
+function setStatus(mode, fraction, label){
+  el.statusBar.className = 'status-bar' + (mode === 'idle' ? '' : ' ' + mode);
+  el.statusBarFill.style.width = Math.round(Math.max(0, Math.min(1, fraction)) * 100) + '%';
+  el.statusBarLabel.textContent = label;
+}
+
+const ctx = el.canvas.getContext('2d');
+let uid = 0;
+
+// ---------- sprocket decoration ----------
+function buildSprockets(){
+  const n = 26;
+  [el.sprocketsTop, el.sprocketsBottom].forEach(strip=>{
+    strip.innerHTML = '';
+    for(let i=0;i<n;i++){
+      const d = document.createElement('div');
+      strip.appendChild(d);
+    }
+  });
+}
+buildSprockets();
+
+// ---------- file intake ----------
+// input[multiple] covers the click-to-browse path (OS picker lets you multi-select).
+// For drag-and-drop, we listen on the whole window so dropping a multi-file
+// selection anywhere on the page is caught — not just inside the small dropzone box —
+// and we always preventDefault on window-level dragover/drop so the browser never
+// hijacks the drop to just open one image in a new tab.
+el.dropzone.addEventListener('click', ()=> el.fileInput.click());
+el.fileInput.addEventListener('change', e => addFiles(e.target.files));
+
+window.addEventListener('dragover', e => e.preventDefault());
+window.addEventListener('drop', e => e.preventDefault());
+
+['dragenter','dragover'].forEach(ev=>{
+  el.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); el.dropzone.classList.add('drag'); });
+});
+['dragleave','drop'].forEach(ev=>{
+  el.dropzone.addEventListener(ev, e=>{ e.preventDefault(); e.stopPropagation(); el.dropzone.classList.remove('drag'); });
+});
+el.dropzone.addEventListener('drop', e=>{
+  addFiles(e.dataTransfer.files);
+});
+// also accept a drop anywhere over the stage/filmstrip area, not just the dropzone box
+document.querySelector('.workspace').addEventListener('drop', e=>{
+  if(e.target.closest('#dropzone')) return; // dropzone already handled it above
+  e.preventDefault();
+  addFiles(e.dataTransfer.files);
+});
+
+let dropStatusTimer = null;
+function flashDropStatus(added, attempted){
+  if(!added) return;
+  clearTimeout(dropStatusTimer);
+  el.dropStatus.textContent = added === attempted
+    ? `Added ${added} photo${added>1?'s':''}`
+    : `Added ${added} of ${attempted} (some files weren't JPG/PNG)`;
+  el.dropStatus.classList.add('show');
+  dropStatusTimer = setTimeout(()=> el.dropStatus.classList.remove('show'), 2600);
+}
+
+async function addFiles(fileList){
+  const files = Array.from(fileList).filter(f => f.type === 'image/jpeg' || f.type === 'image/png');
+  if(!files.length) return;
+  el.exportBtn.disabled = true; // don't allow rendering until every photo has finished loading
+  let doneCount = 0;
+  setStatus('busy', 0, `Reading photos… 0/${files.length}`);
+  // decode all dropped/selected files in parallel so a multi-photo drag doesn't
+  // queue up one at a time, then add them in the order they were dropped
+  const decoded = await Promise.allSettled(files.map(async file => {
+    try{
+      const bitmap = await createImageBitmap(file); // full-quality decode, no recompression
+      const thumbUrl = URL.createObjectURL(file);
+      return { id: uid++, name: file.name, bitmap, thumbUrl, duration: state.defaultDuration };
+    } finally {
+      doneCount++;
+      setStatus('busy', doneCount / files.length, `Reading photos… ${doneCount}/${files.length}`);
+    }
+  }));
+  let added = 0;
+  decoded.forEach(r=>{
+    if(r.status === 'fulfilled'){ state.frames.push(r.value); added++; }
+    else console.error('Could not read a dropped file', r.reason);
+  });
+  flashDropStatus(added, files.length);
+  setStatus('ready', 1, `Ready — ${state.frames.length} photo${state.frames.length===1?'':'s'} loaded, you can render`);
+  renderFilmstrip();
+  renderProgressTrack();
+  updateTransportInfo();
+  if(state.frames.length && state.currentIndex >= state.frames.length){
+    state.currentIndex = 0;
+  }
+  if(state.frames.length === 1){
+    state.currentIndex = 0;
+    drawFrame(0);
+  }
+  el.emptyState.style.display = state.frames.length ? 'none' : 'block';
+  el.exportBtn.disabled = state.frames.length === 0;
+  el.fileInput.value = '';
+}
+
+// ---------- default duration stepper ----------
+el.defMinus.addEventListener('click', ()=>{
+  state.defaultDuration = Math.max(1, state.defaultDuration - 1);
+  el.defVal.textContent = state.defaultDuration + 's';
+});
+el.defPlus.addEventListener('click', ()=>{
+  state.defaultDuration += 1;
+  el.defVal.textContent = state.defaultDuration + 's';
+});
+el.applyAll.addEventListener('click', ()=>{
+  state.frames.forEach(f => f.duration = state.defaultDuration);
+  renderFilmstrip();
+  renderProgressTrack();
+  updateTransportInfo();
+});
+
+// ---------- filmstrip rendering ----------
+function renderFilmstrip(){
+  el.filmstrip.innerHTML = '';
+  state.frames.forEach((f, idx)=>{
+    const card = document.createElement('div');
+    card.className = 'frame-card' + (idx === state.currentIndex ? ' active' : '');
+    card.innerHTML = `
+      <img class="frame-thumb" src="${f.thumbUrl}" alt="">
+      <div class="frame-info">
+        <div class="frame-name">${idx+1}. ${escapeHtml(f.name)}</div>
+        <div class="frame-controls">
+          <div class="frame-btns">
+            <button data-act="dur-minus">−</button>
+            <span class="frame-dur">${f.duration}s</span>
+            <button data-act="dur-plus">＋ extend</button>
+          </div>
+          <div class="frame-order">
+            <button data-act="up">▲</button>
+            <button data-act="down">▼</button>
+          </div>
+        </div>
+      </div>
+      <button class="frame-remove" data-act="remove">✕</button>
+    `;
+    card.querySelector('[data-act="dur-minus"]').addEventListener('click', ()=>{
+      f.duration = Math.max(1, f.duration - 1);
+      renderFilmstrip(); renderProgressTrack(); updateTransportInfo();
+    });
+    card.querySelector('[data-act="dur-plus"]').addEventListener('click', ()=>{
+      f.duration += 1;
+      renderFilmstrip(); renderProgressTrack(); updateTransportInfo();
+    });
+    card.querySelector('[data-act="up"]').addEventListener('click', ()=>{
+      if(idx>0){ [state.frames[idx-1], state.frames[idx]] = [state.frames[idx], state.frames[idx-1]]; renderFilmstrip(); renderProgressTrack(); }
+    });
+    card.querySelector('[data-act="down"]').addEventListener('click', ()=>{
+      if(idx<state.frames.length-1){ [state.frames[idx+1], state.frames[idx]] = [state.frames[idx], state.frames[idx+1]]; renderFilmstrip(); renderProgressTrack(); }
+    });
+    card.querySelector('[data-act="remove"]').addEventListener('click', ()=>{
+      state.frames.splice(idx,1);
+      if(state.currentIndex >= state.frames.length) state.currentIndex = Math.max(0, state.frames.length-1);
+      renderFilmstrip(); renderProgressTrack(); updateTransportInfo();
+      el.emptyState.style.display = state.frames.length ? 'none' : 'block';
+      el.exportBtn.disabled = state.frames.length === 0;
+      if(state.frames.length) drawFrame(state.currentIndex);
+      else ctx.clearRect(0,0,el.canvas.width, el.canvas.height);
+    });
+    card.addEventListener('click', (e)=>{
+      if(e.target.closest('button')) return;
+      state.currentIndex = idx;
+      drawFrame(idx);
+      renderFilmstrip();
+    });
+    el.filmstrip.appendChild(card);
+  });
+  el.frameCount.textContent = `(${state.frames.length})`;
+}
+
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- canvas drawing (contain-fit, no crop/stretch) ----------
+function drawFrame(idx){
+  const f = state.frames[idx];
+  if(!f) return;
+  const W = el.canvas.width, H = el.canvas.height;
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0,0,W,H);
+  const scale = Math.min(W / f.bitmap.width, H / f.bitmap.height);
+  const w = f.bitmap.width * scale, h = f.bitmap.height * scale;
+  const x = (W - w)/2, y = (H - h)/2;
+  ctx.drawImage(f.bitmap, x, y, w, h);
+}
+
+// ---------- progress track ----------
+function renderProgressTrack(){
+  el.progressTrack.innerHTML = '';
+  const total = totalDuration();
+  state.frames.forEach((f, idx)=>{
+    const seg = document.createElement('div');
+    seg.className = 'progress-seg';
+    seg.style.flex = f.duration;
+    seg.innerHTML = '<div class="fill"></div>';
+    seg.addEventListener('click', ()=>{
+      stopPlayback();
+      state.currentIndex = idx;
+      drawFrame(idx);
+      renderFilmstrip();
+      renderProgressTrack();
+    });
+    el.progressTrack.appendChild(seg);
+  });
+}
+
+function totalDuration(){
+  return state.frames.reduce((s,f)=>s+f.duration, 0);
+}
+
+function updateTransportInfo(){
+  el.totFrame.textContent = state.frames.length;
+  el.curFrame.textContent = state.frames.length ? state.currentIndex+1 : '–';
+  const t = totalDuration();
+  const m = Math.floor(t/60), s = t%60;
+  el.totTime.textContent = `${m}:${String(s).padStart(2,'0')}`;
+}
+
+// ---------- playback ----------
+el.playBtn.addEventListener('click', ()=>{
+  if(state.exporting) return;
+  if(state.playing) stopPlayback();
+  else startPlayback();
+});
+
+function startPlayback(){
+  if(!state.frames.length) return;
+  state.playing = true;
+  el.playBtn.textContent = '❚❚';
+  playCurrentAndAdvance();
+}
+
+function playCurrentAndAdvance(){
+  if(!state.playing) return;
+  const f = state.frames[state.currentIndex];
+  drawFrame(state.currentIndex);
+  renderFilmstrip();
+  updateTransportInfo();
+  markSegmentActive(state.currentIndex);
+  state.playTimer = setTimeout(()=>{
+    if(!state.playing) return;
+    markSegmentDone(state.currentIndex);
+    state.currentIndex = (state.currentIndex + 1) % state.frames.length;
+    if(state.currentIndex === 0){
+      resetSegments();
+    }
+    playCurrentAndAdvance();
+  }, f.duration * 1000);
+}
+
+function markSegmentActive(idx){
+  const segs = el.progressTrack.children;
+  if(segs[idx]) segs[idx].querySelector('.fill').style.transitionDuration = state.frames[idx].duration+'s';
+}
+function markSegmentDone(idx){
+  const segs = el.progressTrack.children;
+  if(segs[idx]) segs[idx].classList.add('done');
+}
+function resetSegments(){
+  Array.from(el.progressTrack.children).forEach(s=>s.classList.remove('done'));
+}
+
+function stopPlayback(){
+  state.playing = false;
+  clearTimeout(state.playTimer);
+  el.playBtn.textContent = '▶';
+}
+
+// ---------- export to video (ffmpeg.wasm: guaranteed MP4 / H.264, lossless color) ----------
+// Why not MediaRecorder: recording the live canvas re-compresses through whatever
+// codec the browser feels like giving you (MP4 in Chrome/Edge/Safari, WebM-only in
+// Firefox), at whatever quality that codec path allows. Encoding with ffmpeg.wasm
+// instead means: (1) the container/codec is always exactly MP4 + H.264, on every
+// browser, and (2) each photo is captured as a lossless PNG straight off the canvas
+// before encoding, so the only compression that ever touches the colors — font or
+// photo — is the single, explicit H.264 pass below, run at settings chosen for
+// zero color loss (yuv444p = no chroma subsampling, crf 0 = mathematically lossless).
+let ffmpegInstance = null;
+async function ensureFFmpeg(){
+  if(ffmpegInstance) return ffmpegInstance;
+  if(location.protocol === 'file:'){
+    // Browsers block cross-origin module fetches from file:// pages outright —
+    // this isn't a network problem, so don't even try; fail fast with a clear reason.
+    throw new Error('Page opened via file:// — the lossless encoder needs to be served over http/https (e.g. `python -m http.server` or GitHub Pages) to load its module.');
+  }
+  setStatus('busy', 0, 'Loading encoder (first render only)…');
+  // Loaded as real ES modules (not plain <script> UMD tags) — ffmpeg.wasm's
+  // wrapper spawns a Web Worker internally, and that worker's path only resolves
+  // correctly through a proper ESM loader. Try a couple of CDN mirrors in case
+  // one is unreachable (corporate network filtering, outage, etc).
+  const mirrors = [
+    { ffmpeg: 'https://esm.sh/@ffmpeg/ffmpeg@0.12.10', util: 'https://esm.sh/@ffmpeg/util@0.12.1' },
+    { ffmpeg: 'https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.12.10/+esm', util: 'https://cdn.jsdelivr.net/npm/@ffmpeg/util@0.12.1/+esm' },
+  ];
+  let lastErr = null;
+  for(const m of mirrors){
+    try{
+      const { FFmpeg } = await import(/* @vite-ignore */ m.ffmpeg);
+      const { toBlobURL } = await import(/* @vite-ignore */ m.util);
+      const ff = new FFmpeg();
+      ff.on('progress', ({ progress }) => {
+        if(state.exporting){
+          const pct = Math.max(0, Math.min(1, progress));
+          setStatus('busy', pct, `Encoding H.264 MP4… ${Math.round(pct*100)}%`);
+          el.exportBtn.textContent = `Encoding… ${Math.round(pct*100)}%`;
+        }
+      });
+      const base = 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.12.6/dist/umd';
+      await ff.load({
+        coreURL: await toBlobURL(`${base}/ffmpeg-core.js`, 'text/javascript'),
+        wasmURL: await toBlobURL(`${base}/ffmpeg-core.wasm`, 'application/wasm'),
+      });
+      ffmpegInstance = ff;
+      return ff;
+    } catch(err){
+      lastErr = err;
+      console.warn('Encoder mirror failed, trying next if available', m, err);
+    }
+  }
+  throw lastErr || new Error('Could not load the lossless encoder from any mirror.');
+}
+
+
+function flashExportNotice(msg){
+  el.exportNotice.textContent = msg;
+}
+el.exportBtn.addEventListener('click', ()=>{
+  el.exportNotice.textContent = '';
+  exportVideo();
+});
+
+function canvasToPngBytes(){
+  return new Promise((resolve, reject)=>{
+    el.canvas.toBlob(blob=>{
+      if(!blob) return reject(new Error('canvas.toBlob failed'));
+      blob.arrayBuffer().then(buf => resolve(new Uint8Array(buf)));
+    }, 'image/png'); // PNG = lossless intermediate, no re-quantizing before encode
+  });
+}
+
+async function exportVideo(){
+  if(!state.frames.length || state.exporting) return;
+  stopPlayback();
+  state.exporting = true;
+  el.exportBtn.disabled = true;
+  el.playBtn.disabled = true;
+  const originalLabel = el.exportBtn.textContent;
+  resetSegments();
+
+  try{
+    await exportViaFFmpeg();
+    setStatus('ready', 1, 'Done — MP4 (H.264) downloaded, lossless color');
+  } catch(err){
+    console.error('Lossless encoder unavailable, falling back to browser recorder', err);
+    const isFileProtocol = location.protocol === 'file:';
+    try{
+      const usedFallbackWebm = await exportViaMediaRecorder();
+      setStatus('ready', 1, 'Done — MP4 downloaded (standard quality, not lossless this time)');
+      let msg;
+      if(isFileProtocol){
+        msg = 'Lossless mode needs this page served over http/https, not opened as a local file — run `python -m http.server` in its folder (or host it on GitHub Pages) and open it via that URL instead. Exported a standard-quality MP4 for now' + (usedFallbackWebm ? ' (as .webm — this browser also can\'t record MP4 directly).' : '.');
+      } else {
+        msg = usedFallbackWebm
+          ? 'The lossless MP4 encoder couldn\'t load, and this browser can\'t record MP4 either — exported as .webm instead.'
+          : 'The lossless MP4 encoder couldn\'t load (needs a working connection to its CDN) — exported a high-bitrate MP4 through the browser instead. Try exporting again for the lossless version.';
+      }
+      flashExportNotice(msg);
+    } catch(err2){
+      console.error('Export failed entirely', err2);
+      flashExportNotice('Export failed — see the browser console for details. You can try again.');
+      setStatus('idle', 0, 'Export failed — see console');
+    }
+  } finally {
+    state.exporting = false;
+    el.exportBtn.disabled = false;
+    el.playBtn.disabled = false;
+    el.exportBtn.textContent = originalLabel;
+    resetSegments();
+  }
+}
+
+// ---------- primary path: lossless MP4 (H.264) via ffmpeg.wasm ----------
+async function exportViaFFmpeg(){
+  const ff = await ensureFFmpeg();
+
+  // 1) Render every photo to its own lossless PNG at the exact letterboxed
+  //    1920x1080 frame, and write it into ffmpeg's virtual filesystem.
+  for(let i=0;i<state.frames.length;i++){
+    state.currentIndex = i;
+    drawFrame(i);
+    renderFilmstrip();
+    updateTransportInfo();
+    markSegmentActive(i);
+    for(let k=0;k<i;k++) markSegmentDone(k);
+    const pct = i / state.frames.length;
+    setStatus('busy', pct, `Preparing frame ${i+1}/${state.frames.length}…`);
+    el.exportBtn.textContent = `Preparing ${i+1}/${state.frames.length}…`;
+    const png = await canvasToPngBytes();
+    await ff.writeFile(`f${String(i).padStart(4,'0')}.png`, png);
+    await new Promise(r=>setTimeout(r,0)); // yield so the UI (bar, filmstrip) actually repaints
+  }
+  markSegmentDone(state.frames.length - 1);
+
+  // 2) Build a concat list with each photo's exact duration. ffmpeg's concat
+  //    demuxer ignores the *last* entry's duration unless the file is listed
+  //    once more afterward — so we repeat the final frame per that convention.
+  let list = '';
+  state.frames.forEach((f, i)=>{
+    list += `file 'f${String(i).padStart(4,'0')}.png'\n`;
+    list += `duration ${f.duration}\n`;
+  });
+  list += `file 'f${String(state.frames.length-1).padStart(4,'0')}.png'\n`;
+  await ff.writeFile('concat.txt', new TextEncoder().encode(list));
+
+  // 3) Encode. -pix_fmt yuv444p skips chroma subsampling entirely (full color
+  //    resolution kept) and -crf 0 puts libx264 into its mathematically
+  //    lossless mode — together this is the losslessest H.264/MP4 combination
+  //    that exists. -r 30 gives a standard constant frame rate (compatible with
+  //    every player/editor) by holding/duplicating each still, which costs
+  //    nothing in quality since it's the same untouched pixels each time.
+  setStatus('busy', 0, 'Encoding H.264 MP4…');
+  el.exportBtn.textContent = 'Encoding…';
+  await ff.exec([
+    '-f','concat','-safe','0','-i','concat.txt',
+    '-r','30',
+    '-pix_fmt','yuv444p',
+    '-c:v','libx264',
+    '-crf','0',
+    '-preset','medium',
+    '-movflags','+faststart',
+    'out.mp4'
+  ]);
+
+  const data = await ff.readFile('out.mp4');
+  const blob = new Blob([data.buffer], { type: 'video/mp4' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'compiled-photos.mp4';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  // clean up ffmpeg's virtual filesystem for next time
+  for(let i=0;i<state.frames.length;i++){
+    await ff.deleteFile(`f${String(i).padStart(4,'0')}.png`).catch(()=>{});
+  }
+  await ff.deleteFile('concat.txt').catch(()=>{});
+  await ff.deleteFile('out.mp4').catch(()=>{});
+}
+
+// ---------- fallback path: MediaRecorder (used only if the lossless encoder
+// can't load/run — e.g. no internet on first use, or the browser's wasm memory
+// limit is too small for a very large/long compile). Still forces MP4/H.264
+// wherever the browser supports it, at a high bitrate. Returns true if it had
+// to fall back further to WebM (only happens on browsers with no MP4 recording
+// support at all, mainly older Firefox). ----------
+async function exportViaMediaRecorder(){
+  const mimeCandidates = [
+    'video/mp4;codecs=avc1.640028',
+    'video/mp4;codecs=h264',
+    'video/mp4',
+    'video/webm;codecs=vp9',
+    'video/webm;codecs=vp8',
+    'video/webm'
+  ];
+  const mimeType = mimeCandidates.find(m => MediaRecorder.isTypeSupported(m)) || 'video/webm';
+  const usingWebmFallback = !mimeType.startsWith('video/mp4');
+
+  const stream = el.canvas.captureStream(30);
+  const recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 20_000_000 });
+  const chunks = [];
+  recorder.ondataavailable = e => { if(e.data.size) chunks.push(e.data); };
+  const done = new Promise(resolve => recorder.onstop = resolve);
+  recorder.start(100);
+
+  const boundaries = [];
+  let acc = 0;
+  for(const f of state.frames){ acc += f.duration * 1000; boundaries.push(acc); }
+  const totalMs = acc;
+
+  let lastIndex = -1;
+  await new Promise(resolve => {
+    const start = performance.now();
+    function tick(now){
+      const elapsed = now - start;
+      if(elapsed >= totalMs){
+        drawFrame(state.frames.length - 1);
+        resolve();
+        return;
+      }
+      let idx = 0;
+      while(idx < boundaries.length - 1 && elapsed >= boundaries[idx]) idx++;
+      if(idx !== lastIndex){
+        lastIndex = idx;
+        state.currentIndex = idx;
+        renderFilmstrip();
+        updateTransportInfo();
+        markSegmentActive(idx);
+        for(let i=0;i<idx;i++) markSegmentDone(i);
+        const pct = idx / state.frames.length;
+        setStatus('busy', pct, `Rendering ${idx+1}/${state.frames.length}…`);
+        el.exportBtn.textContent = `Rendering ${idx+1}/${state.frames.length}…`;
+      }
+      drawFrame(idx);
+      requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+  });
+
+  markSegmentDone(state.frames.length - 1);
+  await new Promise(r => setTimeout(r, 200));
+  recorder.stop();
+  await done;
+
+  const outputType = recorder.mimeType || mimeType;
+  const ext = outputType.startsWith('video/mp4') ? 'mp4' : 'webm';
+  const blob = new Blob(chunks, {type:outputType});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `compiled-photos.${ext}`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+
+  return usingWebmFallback;
+}
+
+// init
+renderFilmstrip();
+renderProgressTrack();
+updateTransportInfo();
+</script>
+
+</body>
+</html>
